@@ -1,21 +1,52 @@
-- uses: actions/checkout@v4
+name: Exynos990 Kernel Build (y2s)
 
-- name: Install dependencies
-  run: |
-    sudo apt update
-    sudo apt install -y \
-      git bc bison flex libssl-dev \
-      build-essential clang lld \
-      libncurses-dev dwarves zip unzip
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
 
-- name: Clone KernelSU (pinned)
-  run: |
-    git clone https://github.com/tiann/KernelSU.git drivers/kernelsu
-    cd drivers/kernelsu
-    git checkout cbad0d6
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-- name: Make build.sh executable
-  run: chmod +x build.sh
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
 
-- name: Build kernel
-  run: ./build.sh -m y2s -k y -c n
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            git bc bison flex libssl-dev \
+            build-essential clang lld \
+            libncurses-dev dwarves zip unzip
+
+      - name: Clone KernelSU (pinned)
+        run: |
+          git clone https://github.com/tiann/KernelSU.git drivers/kernelsu
+          cd drivers/kernelsu
+          git checkout cbad0d6
+
+      - name: Make build.sh executable
+        run: chmod +x build.sh
+
+      - name: Build kernel
+        run: ./build.sh -m y2s -k y -c n
+
+      - name: Collect build artifacts
+        if: success()
+        run: |
+          mkdir -p artifacts
+          find out -type f \( \
+            -name "Image" -o \
+            -name "Image.gz" -o \
+            -name "Image.gz-dtb" -o \
+            -name "*.dtb" -o \
+            -name "*.dtbo" \
+          \) -exec cp --parents {} artifacts/ \;
+
+      - name: Upload kernel artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: exynos990-y2s-kernel
+          path: artifacts
