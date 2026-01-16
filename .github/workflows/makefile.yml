@@ -25,8 +25,6 @@ jobs:
           rm -rf drivers/kernelsu
           git clone --no-single-branch https://github.com/tiann/KernelSU.git drivers/kernelsu
           cd drivers/kernelsu
-          git fetch --unshallow || echo "Already full clone"
-          git checkout cbad0d6
           cd ../..
 
       - name: Install Dependencies
