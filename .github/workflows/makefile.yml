@@ -1,29 +1,21 @@
-name: Exynos990 Kernel Build
+- uses: actions/checkout@v4
 
-on:
-  workflow_dispatch:
-  push:
-    branches: [ "main" ]
+- name: Install dependencies
+  run: |
+    sudo apt update
+    sudo apt install -y \
+      git bc bison flex libssl-dev \
+      build-essential clang lld \
+      libncurses-dev dwarves zip unzip
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+- name: Clone KernelSU (pinned)
+  run: |
+    git clone https://github.com/tiann/KernelSU.git drivers/kernelsu
+    cd drivers/kernelsu
+    git checkout cbad0d6
 
-    steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
+- name: Make build.sh executable
+  run: chmod +x build.sh
 
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y \
-            git bc bison flex libssl-dev \
-            build-essential clang lld \
-            libncurses-dev dwarves
-
-      - name: Make build.sh executable
-        run: chmod +x build.sh
-
-      - name: Build kernel
-        run: ./build.sh -m y2s -k y -c n
-
+- name: Build kernel
+  run: ./build.sh -m y2s -k y -c n
