@@ -23,6 +23,7 @@ jobs:
 
       - name: Clone KernelSU (pinned)
         run: |
+          rm -rf drivers/kernelsu
           git clone https://github.com/tiann/KernelSU.git drivers/kernelsu
           cd drivers/kernelsu
           git checkout cbad0d6
