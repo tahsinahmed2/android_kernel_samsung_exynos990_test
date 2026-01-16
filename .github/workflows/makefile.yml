@@ -1,53 +1,53 @@
-name: Exynos990 Kernel Build (y2s)
+name: Build Exynos990 Kernel
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # manuell auslösbar
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      KERNEL_DEFCONFIG: exynos990_defconfig   # Passe ggf. an dein Defconfig an
+      ARCH: arm64
+      CROSS_COMPILE: aarch64-linux-gnu-      # Passe an die Toolchain an
 
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
+      - name: Checkout Kernel Repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0   # volle Historie, wichtig für alte Commits
 
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y \
-            git bc bison flex libssl-dev \
-            build-essential clang lld \
-            libncurses-dev dwarves zip unzip
-
-      - name: Clone KernelSU (pinned)
+      - name: Setup KernelSU
         run: |
           rm -rf drivers/kernelsu
-          git clone https://github.com/tiann/KernelSU.git drivers/kernelsu
+          git clone --no-single-branch https://github.com/tiann/KernelSU.git drivers/kernelsu
           cd drivers/kernelsu
+          git fetch --unshallow || echo "Already full clone"
           git checkout cbad0d6
+          cd ../..
 
-      - name: Make build.sh executable
-        run: chmod +x build.sh
-
-      - name: Build kernel
-        run: ./build.sh -m y2s -k y -c n
-
-      - name: Collect build artifacts
-        if: success()
+      - name: Install Dependencies
         run: |
-          mkdir -p artifacts
-          find out -type f \( \
-            -name "Image" -o \
-            -name "Image.gz" -o \
-            -name "Image.gz-dtb" -o \
-            -name "*.dtb" -o \
-            -name "*.dtbo" \
-          \) -exec cp --parents {} artifacts/ \;
+          sudo apt-get update
+          sudo apt-get install -y build-essential bc libncurses5-dev bison flex libssl-dev
 
-      - name: Upload kernel artifacts
-        uses: actions/upload-artifact@v4
+      - name: Setup Cross-Compiler
+        run: |
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Build Kernel
+        run: |
+          make O=out ARCH=$ARCH $KERNEL_DEFCONFIG
+          make -j$(nproc) O=out ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE
+
+      - name: Archive Kernel Image
+        uses: actions/upload-artifact@v3
         with:
-          name: exynos990-y2s-kernel
-          path: artifacts
+          name: kernel-artifacts
+          path: |
+            out/arch/arm64/boot/Image
+            out/arch/arm64/boot/dts/**/*.dtb
+            out/arch/arm64/boot/Image.gz-dtb
